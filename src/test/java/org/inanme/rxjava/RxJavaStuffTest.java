@@ -1,19 +1,38 @@
 package org.inanme.rxjava;
 
+import com.google.common.collect.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
+import org.openjdk.jmh.Main;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.runner.RunnerException;
 import rx.Observable;
 import rx.Subscriber;
 import rx.schedulers.Schedulers;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
+@State(Scope.Thread)
 public class RxJavaStuffTest {
+
+    @Rule
+    public TestName name = new TestName();
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
     private ExecutorService service = Executors.newFixedThreadPool(3);
 
@@ -44,23 +63,39 @@ public class RxJavaStuffTest {
         }
     }
 
-    @Test
-    public void test00() {
-        System.out.println(new Date());
+    public void test() throws IOException, RunnerException {
+        Main.main(new String[]{});
+    }
 
+    @Before
+    public void start() {
+        System.out.printf("Test %s started: %s\n", name.getMethodName(), sdf.format(new Date()));
+    }
+
+    @After
+    public void finish() {
+        System.out.printf("Test %s ended  : %s\n", name.getMethodName(), sdf.format(new Date()));
+    }
+
+    @Benchmark
+    public void test000() {
+        ContiguousSet<Integer> integers = ContiguousSet.create(Range.closed(1, 1000), DiscreteDomain.integers());
+        integers.stream().mapToInt(Integer::intValue).sum();
+    }
+
+    @Test
+    public void test001() {
         Observable<Long> task1 = Observable.from(service.submit(new Waiter(2)));
         Observable<Long> task2 = Observable.from(service.submit(new Waiter(3)));
         Observable<Long> task3 = Observable.from(service.submit(new Waiter(4)));
         Observable<Long> zip = Observable.zip(task1, task2, task3, (x, y, z) -> x + y + z);
         zip.subscribe(System.out::println);
-
-        System.out.println(new Date());
     }
 
     @Test
     public void test0() throws InterruptedException {
         Observable<Integer> observable = Observable.create(subscriber -> {
-            PrimitiveIterator.OfInt iterator = IntStream.range(0, 5).iterator();
+            PrimitiveIterator.OfInt iterator = IntStream.range(1, 5).iterator();
             System.out.println(Thread.currentThread().getName() + " subs");
             if (!subscriber.isUnsubscribed()) {
                 while (iterator.hasNext()) {
@@ -73,26 +108,24 @@ public class RxJavaStuffTest {
         });
 
         observable.subscribeOn(Schedulers.from(thread1)) //
-            .observeOn(Schedulers.from(thread2)) //
-            .map(x -> {
-                //System.out.println(Thread.currentThread().getName() + " map");
-                return x + 1;
-            }).subscribe(s -> System.out.println(Thread.currentThread().getName() + " observe" + s));
+                .observeOn(Schedulers.from(thread2)) //
+                .map(x -> {
+                    //System.out.println(Thread.currentThread().getName() + " map");
+                    return x + 1;
+                }).subscribe(s -> System.out.println(Thread.currentThread().getName() + " observe " + s));
 
         observable.subscribeOn(Schedulers.from(thread1)) //
-            .observeOn(Schedulers.from(thread3)) //
-            .map(x -> {
-                //System.out.println(Thread.currentThread().getName() + " map");
-                return x * 2;
-            }).subscribe(s -> System.out.println(Thread.currentThread().getName() + " observe" + s));
+                .observeOn(Schedulers.from(thread3)) //
+                .map(x -> {
+                    //System.out.println(Thread.currentThread().getName() + " map");
+                    return x * 2;
+                }).subscribe(s -> System.out.println(Thread.currentThread().getName() + " observe " + s));
 
         TimeUnit.SECONDS.sleep(3l);
     }
 
     @Test
     public void test1() {
-        System.out.println(new Date());
-
         Observable.OnSubscribe<String> subscribeFunction = (s) -> {
             Subscriber subscriber = (Subscriber) s;
 
@@ -117,17 +150,31 @@ public class RxJavaStuffTest {
         };
 
         Observable.create(subscribeFunction)
-                  .subscribe((incomingValue) -> System.out.println("incomingValue " + incomingValue),
-                             (error) -> System.out.println("Something went wrong" + error.getMessage()),
-                             () -> System.out.println("This observable is finished"));
-
-        System.out.println(new Date());
+                .subscribe((incomingValue) -> System.out.println("incomingValue " + incomingValue),
+                        (error) -> System.out.println("Something went wrong" + error.getMessage()),
+                        () -> System.out.println("This observable is finished"));
     }
 
     @Test
-    public void test2() {
-        List<Integer> observable = Observable.just(1, 2, 3).map(i -> i + 10).toList().toBlocking().single();
-        assertThat(observable, is(Arrays.asList(11, 12, 13)));
+    public void primitiveProcessing() {
+        Observable<Integer> just = Observable.just(1, 2, 3);
+
+        List<Integer> single10 = just.map(i -> i + 10).toList().toBlocking().single();
+        assertThat(single10, is(Arrays.asList(11, 12, 13)));
+
+        List<Integer> single20 = just.map(i -> i + 20).toList().toBlocking().single();
+        assertThat(single20, is(Arrays.asList(21, 22, 23)));
+
+        List<Integer> collect = IntStream.range(0, 100).mapToObj(Integer::valueOf).collect(Collectors.toList());
+
+        Integer single = Observable.from(collect)
+                .take(11)
+                .filter(x -> x % 2 == 0)
+                .map(x -> x * 2)
+                .reduce(0, (x, y) -> x + y)
+                .toBlocking().single();
+
+        System.out.println(single);
     }
 
     @Test
@@ -143,14 +190,13 @@ public class RxJavaStuffTest {
                 subscriber.onCompleted();
             }
         });
-
-        observable.subscribe(s -> System.out.println("hello1-" + s));
-        observable.subscribe(s -> System.out.println("hello2-" + s));
-        observable.subscribe(s -> System.out.println("hello3-" + s));
+        observable.subscribe(i -> System.out.println("hello1-" + i));
+        observable.forEach(i -> System.out.println("hello2-" + i));
+        observable.filter(i -> i % 2 == 0).forEach(i -> System.out.println("hello3-" + i));
     }
 
     @Test
-    public void asynchronousObservableExample() {
+    public void asynchronousObservableExample() throws InterruptedException {
         Observable<Integer> observable = Observable.create(subscriber -> {
             service.submit(() -> {
                 PrimitiveIterator.OfInt iterator = IntStream.range(0, 5).iterator();
@@ -169,4 +215,47 @@ public class RxJavaStuffTest {
         //observable.subscribe(s -> System.out.println("hello2-" + s));
         //observable.subscribe(s -> System.out.println("hello3-" + s));
     }
+
+    @Test
+    public void none() throws InterruptedException {
+
+        Observable.just(1, 2, 3)
+                //Asynchronously subscribes Observers to this Observable
+                .subscribeOn(Schedulers.from(thread1))
+                .observeOn(Schedulers.from(thread2))
+                .doOnNext(x -> System.err.println(String.format("I  :%s:%d", Thread.currentThread().getName(), x)))
+
+                .observeOn(Schedulers.from(thread3))
+                .doOnNext(x -> System.err.println(String.format("II :%s:%d", Thread.currentThread().getName(), x)))
+                .map(x -> x * 2)
+
+                //.observeOn(Schedulers.from(thread3))
+                .doOnNext(x -> System.err.println(String.format("III:%s:%d", Thread.currentThread().getName(), x)))
+                .subscribe(x -> System.err.println(String.format("IV :%s:%d", Thread.currentThread().getName(), x)));
+
+        TimeUnit.SECONDS.sleep(3l);
+
+    }
+
+    @Test
+    public void interval() throws InterruptedException {
+        Observable
+                .interval(1, TimeUnit.SECONDS, Schedulers.from(service))
+                .observeOn(Schedulers.from(service))
+                .subscribe(s -> System.out.println(Thread.currentThread().getName()));
+
+        TimeUnit.SECONDS.sleep(3l);
+    }
+
+    @Test
+    public void mergeConcatZip() {
+        List<Integer> list1 = Arrays.asList(1, 2, 3, 4);
+        List<Integer> list2 = Arrays.asList(5, 6, 7, 8, 9);
+        Observable.from(Iterables.concat(list1, list2));
+        Observable.from(list1).mergeWith(Observable.from(list2));
+        Observable.zip(Observable.from(list1), Observable.from(list2), (x, y) -> x + y);
+        Observable.from(list1).concatWith(Observable.from(list2));
+        Observable.merge(Observable.from(list1), Observable.from(list2)).forEach(System.out::println);
+    }
+
 }
