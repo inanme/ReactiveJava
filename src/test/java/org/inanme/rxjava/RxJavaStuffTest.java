@@ -35,9 +35,9 @@ public class RxJavaStuffTest extends Infra {
 
     @Test
     public void zip3Futures() {
-        Observable<Long> task1 = Observable.from(service.submit(new Waiter(2)));
-        Observable<Long> task2 = Observable.from(service.submit(new Waiter(3)));
-        Observable<Long> task3 = Observable.from(service.submit(new Waiter(4)));
+        Observable<Long> task1 = Observable.from(ioPool.submit(new Waiter(2)));
+        Observable<Long> task2 = Observable.from(ioPool.submit(new Waiter(3)));
+        Observable<Long> task3 = Observable.from(ioPool.submit(new Waiter(4)));
         Observable<Long> zip = Observable.zip(task1, task2, task3, (x, y, z) -> x + y + z);
         zip.subscribe(System.out::println);
     }
@@ -84,7 +84,7 @@ public class RxJavaStuffTest extends Infra {
                 int sleepTime = random.nextInt(10);
                 TimeUnit.SECONDS.sleep(sleepTime);
                 return String.format("%d wait %d", i, sleepTime);
-            }).map(service::submit).collect(Collectors.toList());
+            }).map(ioPool::submit).collect(Collectors.toList());
 
             futures.forEach(f -> {
                 if (!s.isUnsubscribed()) {
@@ -149,7 +149,7 @@ public class RxJavaStuffTest extends Infra {
     @Test
     public void asynchronousObservableExample() throws InterruptedException {
         Observable<Integer> observable = Observable.create(subscriber -> {
-            service.submit(() -> {
+            ioPool.submit(() -> {
                 PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
                 if (!subscriber.isUnsubscribed()) {
                     while (iterator.hasNext()) {
@@ -191,8 +191,8 @@ public class RxJavaStuffTest extends Infra {
     @Test
     public void interval() {
         Observable
-                .interval(1, TimeUnit.SECONDS, Schedulers.from(service))
-                .observeOn(Schedulers.from(service))
+                .interval(1, TimeUnit.SECONDS, ioScheduler)
+                .observeOn(ioScheduler)
                 .subscribe(s -> log(s));
 
         giveMeTime(3l);

@@ -5,6 +5,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import rx.Scheduler;
+import rx.schedulers.Schedulers;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,7 +23,9 @@ public class Infra {
 
     protected SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
-    protected ExecutorService service = Executors.newFixedThreadPool(3);
+    protected ExecutorService ioPool = Executors.newFixedThreadPool(4);
+
+    protected Scheduler ioScheduler = Schedulers.from(ioPool);
 
     protected ExecutorService thread1 = Executors.newCachedThreadPool(r -> new Thread(r, "thread1"));
 
