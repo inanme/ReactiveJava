@@ -18,14 +18,13 @@ class StockModule {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                    .add("symbol", symbol)
-                    .toString();
+            return MoreObjects.toStringHelper(this).add("symbol", symbol).toString();
         }
     }
 
     static class StockOption {
         final Stock stock;
+
         final Double value;
 
         StockOption(Stock stock, Double value) {
@@ -35,10 +34,7 @@ class StockModule {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                    .add("stock", stock)
-                    .add("value", value)
-                    .toString();
+            return MoreObjects.toStringHelper(this).add("stock", stock).add("value", value).toString();
         }
     }
 
@@ -61,6 +57,7 @@ class StockModule {
             return Observable.<StockOption>create(subscriber -> {
                 Integer random = rng.nextInt(4);
                 try {
+                    System.out.println("Will wait " + random);
                     TimeUnit.SECONDS.sleep(random.longValue());
                 } catch (InterruptedException e) {
                     subscriber.onError(e);
