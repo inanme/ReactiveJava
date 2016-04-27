@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Infra {
 
@@ -27,13 +28,22 @@ public class Infra {
 
     protected Scheduler ioScheduler = Schedulers.from(ioPool);
 
-    protected ExecutorService thread1 = Executors.newCachedThreadPool(r -> new Thread(r, "thread1"));
+    private AtomicInteger threadFactory1 = new AtomicInteger();
 
-    protected ExecutorService thread2 = Executors.newCachedThreadPool(r -> new Thread(r, "thread2"));
+    private AtomicInteger threadFactory2 = new AtomicInteger();
 
-    protected ExecutorService thread3 = Executors.newCachedThreadPool(r -> new Thread(r, "thread3"));
+    private AtomicInteger threadFactory3 = new AtomicInteger();
 
-    protected Random random = new Random();
+    protected ExecutorService thread1 =
+        Executors.newCachedThreadPool(r -> new Thread(r, "thread1-" + threadFactory1.getAndIncrement()));
+
+    protected ExecutorService thread2 =
+        Executors.newCachedThreadPool(r -> new Thread(r, "thread2-" + threadFactory2.getAndIncrement()));
+
+    protected ExecutorService thread3 =
+        Executors.newCachedThreadPool(r -> new Thread(r, "thread3-" + threadFactory3.getAndIncrement()));
+
+    protected Random random = new Random(System.currentTimeMillis());
 
     private long start;
 
@@ -66,7 +76,8 @@ public class Infra {
     public void finish() {
         System.out.printf("Test %s ended  : %s\n", name.getMethodName(), sdf.format(new Date()));
         long duration = System.currentTimeMillis() - start;
-        System.out.printf("Test %s took   : %s\n", name.getMethodName(), DurationFormatUtils.formatDurationWords(duration, false, false));
+        System.out.printf("Test %s took   : %s\n", name.getMethodName(),
+                          DurationFormatUtils.formatDurationWords(duration, false, false));
     }
 
     protected void giveMeTime(long seconds) {
@@ -80,5 +91,4 @@ public class Infra {
     protected void log(Object log) {
         System.out.println(Thread.currentThread().getName() + " " + log);
     }
-
 }
