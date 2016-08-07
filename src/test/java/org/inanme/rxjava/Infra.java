@@ -8,8 +8,9 @@ import org.junit.rules.TestName;
 import rx.Scheduler;
 import rx.schedulers.Schedulers;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -21,8 +22,6 @@ public class Infra {
 
     @Rule
     public TestName name = new TestName();
-
-    protected SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
     protected ExecutorService ioPool = Executors.newFixedThreadPool(4);
 
@@ -68,13 +67,17 @@ public class Infra {
 
     @Before
     public void start() {
-        System.out.printf("Test %s started: %s\n", name.getMethodName(), sdf.format(new Date()));
+        System.out.printf("Test %s started: %s\n", name.getMethodName(), now());
         start = System.currentTimeMillis();
+    }
+
+    String now() {
+        return LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE_TIME);
     }
 
     @After
     public void finish() {
-        System.out.printf("Test %s ended  : %s\n", name.getMethodName(), sdf.format(new Date()));
+        System.out.printf("Test %s ended  : %s\n", name.getMethodName(), now());
         long duration = System.currentTimeMillis() - start;
         System.out.printf("Test %s took   : %s\n", name.getMethodName(),
                           DurationFormatUtils.formatDurationWords(duration, false, false));
@@ -89,6 +92,6 @@ public class Infra {
     }
 
     protected void log(Object log) {
-        System.out.println(Thread.currentThread().getName() + " " + log);
+        System.out.format("%s %s: %s \n", now(), Thread.currentThread().getName(), log);
     }
 }

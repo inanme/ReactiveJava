@@ -1,10 +1,8 @@
 package org.inanme;
 
-import org.inanme.HystrixModule.*;
+import org.inanme.HystrixModule.Command1;
 import org.junit.Test;
-import rx.Observable;
 
-import java.util.concurrent.Future;
 
 public class HystrixTest {
 
