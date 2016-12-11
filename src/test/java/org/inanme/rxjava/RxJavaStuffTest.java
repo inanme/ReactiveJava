@@ -7,14 +7,15 @@ import rx.observables.ConnectableObservable;
 import rx.schedulers.Schedulers;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
-import java.util.PrimitiveIterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -22,21 +23,37 @@ import static org.junit.Assert.assertThat;
 public class RxJavaStuffTest extends Infra {
 
     @Test
-    public void zip3Futures() {
-        Observable<Long> task1 = Observable.from(ioPool.submit(new Waiter(2)));
-        Observable<Long> task2 = Observable.from(ioPool.submit(new Waiter(3)));
-        Observable<Long> task3 = Observable.from(ioPool.submit(new Waiter(4)));
+    public void zip() {
+        Observable<Long> task1 = Observable.from(future(2));
+        Observable<Long> task2 = Observable.from(future(3));
+        Observable<Long> task3 = Observable.from(future(4));
         Observable<Long> zip = Observable.zip(task1, task2, task3, (x, y, z) -> x + y + z);
-        zip.subscribe(System.out::println);
+        zip.subscribe(this::log);
+    }
+
+    @Test
+    public void concat() {
+        Observable<Long> task1 = Observable.from(future(2));
+        Observable<Long> task2 = Observable.from(future(3));
+        Observable<Long> task3 = Observable.from(future(4));
+        Observable.concat(task1, task2, task3).forEach(this::log);
+    }
+
+    @Test
+    public void merge() {
+        Observable<Long> task1 = Observable.from(future(2));
+        Observable<Long> task2 = Observable.from(future(3));
+        Observable<Long> task3 = Observable.from(future(4));
+        Observable.merge(task1, task2, task3).forEach(this::log);
     }
 
     @Test
     public void test0() {
         Observable<Integer> observable = Observable.create(subscriber -> {
-            PrimitiveIterator.OfInt iterator = IntStream.range(1, 3).iterator();
+            Iterator<Integer> iterator = Arrays.asList(1, 2, 3).iterator();
             log("subs");
-            if (!subscriber.isUnsubscribed()) {
-                while (iterator.hasNext()) {
+            while (iterator.hasNext()) {
+                if (!subscriber.isUnsubscribed()) {
                     subscriber.onNext(iterator.next());
                 }
             }
@@ -49,30 +66,31 @@ public class RxJavaStuffTest extends Infra {
                 .subscribeOn(Schedulers.from(thread1)) //
                 .observeOn(Schedulers.from(thread2)) //
                 .map(x -> {
-                    log("map");
+                    log("map+1");
                     return x + 1;
-                }).subscribe(s -> log("observe " + s));
+                }).subscribe(s -> log("observe+1 " + s));
 
         observable
                 .subscribeOn(Schedulers.from(thread1)) //
                 .observeOn(Schedulers.from(thread3)) //
                 .map(x -> {
-                    log("map");
+                    log("map*2");
                     return x * 2;
-                }).subscribe(s -> log("observe " + s));
+                }).subscribe(s -> log("observe*2 " + s));
 
-        giveMeTime(3l);
+        sseconds(3l);
     }
 
     @Test
     public void test1() {
         Observable.OnSubscribe<String> subscribeFunction = (s) -> {
 
-            List<Future<String>> futures = IntStream.range(1, 5).mapToObj(i -> (Callable<String>) () -> {
-                int sleepTime = random.nextInt(10);
-                TimeUnit.SECONDS.sleep(sleepTime);
-                return String.format("%d wait %d", i, sleepTime);
-            }).map(ioPool::submit).collect(Collectors.toList());
+            List<Future<String>> futures = IntStream.range(1, 5)
+                    .mapToObj(i -> (Callable<String>) () -> {
+                        int sleepTime = random.nextInt(10);
+                        TimeUnit.SECONDS.sleep(sleepTime);
+                        return String.format("%d wait %d", i, sleepTime);
+                    }).map(ioPool::submit).collect(Collectors.toList());
 
             futures.forEach(f -> {
                 if (!s.isUnsubscribed()) {
@@ -104,7 +122,7 @@ public class RxJavaStuffTest extends Infra {
         List<Integer> single20 = just.map(i -> i + 20).toList().toBlocking().single();
         assertThat(single20, is(Arrays.asList(21, 22, 23)));
 
-        List<Integer> collect = IntStream.range(0, 100).mapToObj(Integer::valueOf).collect(Collectors.toList());
+        List<Integer> collect = IntStream.range(0, 100).boxed().collect(Collectors.toList());
 
         Integer single = Observable.from(collect)
                 .take(11)
@@ -119,9 +137,9 @@ public class RxJavaStuffTest extends Infra {
     @Test
     public void synchronousObservableExample() {
         Observable<Integer> observable = Observable.create(subscriber -> {
-            PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
-            if (!subscriber.isUnsubscribed()) {
-                while (iterator.hasNext()) {
+            Iterator<Integer> iterator = Arrays.asList(0, 1, 2, 3).iterator();
+            while (iterator.hasNext()) {
+                if (!subscriber.isUnsubscribed()) {
                     subscriber.onNext(iterator.next());
                 }
             }
@@ -138,9 +156,9 @@ public class RxJavaStuffTest extends Infra {
     public void asynchronousObservableExample() throws InterruptedException {
         Observable<Integer> observable = Observable.create(subscriber -> {
             ioPool.submit(() -> {
-                PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
-                if (!subscriber.isUnsubscribed()) {
-                    while (iterator.hasNext()) {
+                Iterator<Integer> iterator = Arrays.asList(0, 1, 2, 3).iterator();
+                while (iterator.hasNext()) {
+                    if (!subscriber.isUnsubscribed()) {
                         subscriber.onNext(iterator.next());
                     }
                 }
@@ -160,39 +178,71 @@ public class RxJavaStuffTest extends Infra {
 
         Observable.just(1, 2, 3)
                 //Asynchronously subscribes Observers to this Observable
-                .subscribeOn(Schedulers.from(thread1))
-                .observeOn(Schedulers.from(thread2))
-                .doOnNext(x -> log(String.format("I  :%s:%d", Thread.currentThread().getName(), x)))
+                .subscribeOn(Schedulers.from(thread0))
+                .observeOn(Schedulers.from(thread1))
+                .doOnNext(x -> log("I  :" + x))
 
-                .observeOn(Schedulers.from(thread3))
-                .doOnNext(x -> log(String.format("II :%s:%d", Thread.currentThread().getName(), x)))
+                .observeOn(Schedulers.from(thread2))
+                .doOnNext(x -> log("II :" + x))
                 .map(x -> x * 2)
 
                 //.observeOn(Schedulers.from(thread3))
-                .doOnNext(x -> log(String.format("III:%s:%d", Thread.currentThread().getName(), x)))
-                .subscribe(x -> log(String.format("IV :%s:%d", Thread.currentThread().getName(), x)));
+                .doOnNext(x -> log("III:" + x))
+                .subscribe(x -> log("IV :" + x));
 
-        giveMeTime(3l);
+        sseconds(3l);
 
     }
 
     @Test
     public void intervalCold() {
         Observable<Long> interval = Observable.interval(1, TimeUnit.SECONDS, ioScheduler);
-        giveMeTime(3l);
+        sseconds(3l);
         interval.observeOn(ioScheduler).subscribe(this::log);
-        giveMeTime(3l);
+        sseconds(3l);
+    }
+
+    @Test
+    public void backpressure() {
+        Observable.interval(10, TimeUnit.MILLISECONDS, Schedulers.from(thread0))
+                .onBackpressureLatest()
+                //.onBackpressureBuffer()
+                //.onBackpressureDrop(l -> log("Drop " + l))
+                .observeOn(Schedulers.from(thread1))
+                .doOnNext(l -> smilis(300))
+                .subscribe(this::log);
+
+        sseconds(3l);
+    }
+
+    @Test
+    public void backpressure1() {
+        Observable.<Long>create(subscriber -> {
+            LongStream.range(1, 100).forEach(l -> {
+                        subscriber.onNext(l);
+                        smilis(4);
+                    }
+            );
+            subscriber.onCompleted();
+        })
+                .onBackpressureBuffer(10, () -> log("overflow"))
+                //.onBackpressureDrop(l -> log("Drop " + l))
+                .observeOn(Schedulers.from(thread1))
+                .doOnNext(l -> smilis(400))
+                .subscribe(this::log);
+
+        sseconds(10000l);
     }
 
     @Test
     public void intervalHot() {
         ConnectableObservable<Long> publish =
                 Observable.interval(1, TimeUnit.SECONDS, ioScheduler).publish();
-        giveMeTime(2l);
+        sseconds(3l);
         publish.observeOn(ioScheduler).subscribe(this::log);
         publish.observeOn(ioScheduler).subscribe(this::log);
 
-        giveMeTime(3l);
+        sseconds(3l);
     }
 
     @Test
@@ -203,7 +253,7 @@ public class RxJavaStuffTest extends Infra {
         Observable.from(list1).mergeWith(Observable.from(list2));
         Observable.zip(Observable.from(list1), Observable.from(list2), (x, y) -> x + y);
         Observable.from(list1).concatWith(Observable.from(list2));
-        Observable.merge(Observable.from(list1), Observable.from(list2)).forEach(System.out::println);
+        Observable.merge(Observable.from(list1), Observable.from(list2)).forEach(this::log);
     }
 
 }
