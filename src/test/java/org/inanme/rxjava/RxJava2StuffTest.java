@@ -240,4 +240,25 @@ public class RxJava2StuffTest extends Infra {
         Observable.merge(Observable.fromIterable(list1), Observable.fromIterable(list2)).forEach(System.out::println);
     }
 
+
+    Single<Integer> fromCallbackApi(int i) {
+        return Single.create(emitter -> {
+            callbackApi(i, (integer, throwable) -> {
+                if (throwable == null) {
+                    emitter.onSuccess(integer);
+                } else {
+                    emitter.onError(throwable);
+                }
+            });
+        });
+    }
+
+    @Test
+    public void callback2Rx() {
+        Single<Integer> single5 = fromCallbackApi(5);
+        Single<Integer> single6 = fromCallbackApi(6);
+        Single.zip(single5, single6, (x, y) -> x + y).subscribe(this::log);
+        sseconds(3l);
+    }
+
 }

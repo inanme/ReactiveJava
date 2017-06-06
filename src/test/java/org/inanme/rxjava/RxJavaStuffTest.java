@@ -3,8 +3,10 @@ package org.inanme.rxjava;
 import com.google.common.collect.Iterables;
 import org.junit.Test;
 import rx.Observable;
+import rx.Single;
 import rx.observables.ConnectableObservable;
 import rx.schedulers.Schedulers;
+import rx.subjects.*;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -255,6 +257,49 @@ public class RxJavaStuffTest extends Infra {
         Observable.zip(Observable.from(list1), Observable.from(list2), (x, y) -> x + y);
         Observable.from(list1).concatWith(Observable.from(list2));
         Observable.merge(Observable.from(list1), Observable.from(list2)).forEach(this::log);
+    }
+
+    @Test
+    public void repeatWhen() {
+        Observable.from(_123).repeat(2).subscribe(this::log);
+    }
+
+    @Test
+    public void asyncSubject() {
+        AsyncSubject<Integer> subject = AsyncSubject.create();
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    @Test
+    public void behaviorSubject() {
+        BehaviorSubject<Integer> subject = BehaviorSubject.create(0);
+        _123.forEach(subject::onNext);
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    @Test
+    public void replaySubject() {
+        ReplaySubject<Integer> subject = ReplaySubject.create();
+        subject.subscribe(this::log);
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    Single<Integer> fromCallbackApi(int i) {
+        return Single.fromEmitter(emitter -> {
+            callbackApi(i, (integer, throwable) -> {
+                if (throwable == null) {
+                    emitter.onSuccess(integer);
+                } else {
+                    emitter.onError(throwable);
+                }
+            });
+        });
     }
 
 }

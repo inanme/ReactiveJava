@@ -6,40 +6,46 @@ import org.inanme.StockModule.StockServer;
 import org.inanme.StockModule.StockServerImpl;
 import org.inanme.rxjava.Infra;
 import org.junit.Test;
-import rx.Observable;
+import rx.Single;
 
 public class StockServerTest extends Infra {
 
     @Test
     public void merge() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
-        Observable<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
-        Observable<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
-        Observable<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
+        Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
+        Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
+        Single<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
 
-        Observable.merge(stock1, stock2, stock3).reduce(0d, (sum, stock) -> sum + stock.value).toBlocking()
-                  .forEach(System.out::println);
+        Single.merge(stock1, stock2, stock3)
+                .reduce(0d, (sum, stock) -> sum + stock.value)
+                .toBlocking()
+                .forEach(this::log);
     }
 
     @Test
     public void zip() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
-        Observable<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
-        Observable<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
-        Observable<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
+        Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
+        Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
+        Single<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
 
-        Observable.zip(stock1, stock2, stock3, (p1, p2, p3) -> p1.value + p2.value + p3.value).toBlocking()
-                  .forEach(System.out::println);
+        double value = Single.zip(stock1, stock2, stock3, (p1, p2, p3) -> p1.value + p2.value + p3.value)
+                .toBlocking()
+                .value();
+        log(value);
     }
 
     @Test
     public void concat() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
-        Observable<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
-        Observable<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
-        Observable<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
+        Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
+        Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
+        Single<StockOption> stock3 = stockServer.getFeed(new Stock("Stock3"));
 
-        Observable.concat(stock1, stock2, stock3).reduce(0d, (sum, stock) -> sum + stock.value).toBlocking()
-                  .forEach(System.out::println);
+        Single.concat(stock1, stock2, stock3)
+                .reduce(0d, (sum, stock) -> sum + stock.value)
+                .toBlocking()
+                .forEach(this::log);
     }
 }
