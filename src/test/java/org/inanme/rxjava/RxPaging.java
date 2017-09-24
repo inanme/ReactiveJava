@@ -1,20 +1,23 @@
 package org.inanme.rxjava;
 
 import com.google.common.collect.ImmutableMap;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import rx.Observable;
+import rx.subjects.BehaviorSubject;
+import rx.subjects.ReplaySubject;
+import rx.subjects.Subject;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import rx.subjects.*;
 
 public class RxPaging {
 
-    public static class Pagination1 extends Infra{
+    static class Pagination1 extends Infra {
 
         @Test
-        public void test1() throws InterruptedException {
+        void test1() throws InterruptedException {
             Map<String, List<String>> pages = ImmutableMap.<String, List<String>>builder()
                     .put("1", Arrays.asList("2", "11", "12", "13"))
                     .put("2", Arrays.asList("3", "21", "22", "23"))
@@ -41,7 +44,7 @@ public class RxPaging {
         }
     }
 
-    public static class Pagination2 {
+    static class Pagination2 {
 
         Observable<Window> paging() {
 
@@ -90,19 +93,19 @@ public class RxPaging {
                 this.key = key;
             }
 
-            public static Token endToken() {
+            static Token endToken() {
                 return startToken();
             }
 
-            public static Token startToken() {
+            static Token startToken() {
                 return new Token("");
             }
 
-            public String getKey() {
+            String getKey() {
                 return key;
             }
 
-            public boolean hasMore() {
+            boolean hasMore() {
                 return !key.isEmpty();
             }
 
@@ -119,12 +122,12 @@ public class RxPaging {
             private final Token token;
             private final String data;
 
-            public Window(Token token, String data) {
+            Window(Token token, String data) {
                 this.token = token;
                 this.data = data;
             }
 
-            public Token getToken() {
+            Token getToken() {
                 return token;
             }
 
@@ -142,7 +145,7 @@ public class RxPaging {
         }
 
         @Test
-        public void testPaging() throws Exception {
+        void testPaging() throws Exception {
             paging().toBlocking().subscribe(System.out::println);
         }
     }

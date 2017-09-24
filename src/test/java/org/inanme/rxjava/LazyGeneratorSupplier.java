@@ -2,7 +2,7 @@ package org.inanme.rxjava;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
 
-public class LazyGeneratorSupplier {
+class LazyGeneratorSupplier {
 
     static <T> com.google.common.base.Supplier<T> supplier(T seed, UnaryOperator<T> f) {
         WeakReference<T> weakref = new WeakReference<>(checkNotNull(seed));
@@ -49,7 +49,7 @@ public class LazyGeneratorSupplier {
     }
 
     @Test
-    public void testMapJoiner() throws InterruptedException {
+    void testMapJoiner() throws InterruptedException {
         Supplier<Long> integerSupplier = Suppliers.memoizeWithExpiration(supplier(0L, Math::incrementExact), 1L, TimeUnit.SECONDS);
         rx.Observable.interval(500L, TimeUnit.MILLISECONDS).forEach(lvalue ->
                 System.err.println(format("%d %d", lvalue, integerSupplier.get()))

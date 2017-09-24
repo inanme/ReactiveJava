@@ -5,13 +5,13 @@ import org.inanme.StockModule.StockOption;
 import org.inanme.StockModule.StockServer;
 import org.inanme.StockModule.StockServerImpl;
 import org.inanme.rxjava.Infra;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import rx.Single;
 
-public class StockServerTest extends Infra {
+class StockServerTest extends Infra {
 
     @Test
-    public void merge() {
+    void merge() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
         Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
         Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
@@ -24,7 +24,7 @@ public class StockServerTest extends Infra {
     }
 
     @Test
-    public void zip() {
+    void zip() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
         Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
         Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));
@@ -37,7 +37,7 @@ public class StockServerTest extends Infra {
     }
 
     @Test
-    public void concat() {
+    void concat() {
         StockServer stockServer = new StockServerImpl(ioScheduler);
         Single<StockOption> stock1 = stockServer.getFeed(new Stock("Stock1"));
         Single<StockOption> stock2 = stockServer.getFeed(new Stock("Stock2"));

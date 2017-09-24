@@ -1,19 +1,19 @@
 package org.inanme.rxjava;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class ReactorTest {
+class ReactorTest {
 
     private static List<String> words = Arrays.asList("the", "quick", "brown", "fox", "jumped",
             "over", "the", "lazy", "dog");
 
     @Test
-    public void simpleCreation() {
+    void simpleCreation() {
         Flux<String> fewWords = Flux.just("Hello", "World");
         Flux<String> manyWords = Flux.fromIterable(words);
 
@@ -22,7 +22,7 @@ public class ReactorTest {
     }
 
     @Test
-    public void findingMissingLetter() {
+    void findingMissingLetter() {
         Flux<String> manyLetters = Flux
                 .fromIterable(words)
                 .flatMap(word -> Flux.fromArray(word.split("")))
@@ -35,7 +35,7 @@ public class ReactorTest {
     }
 
     @Test
-    public void blocks() {
+    void blocks() {
         Flux<String> helloPauseWorld = Mono.just("Hello").concatWith(Mono.just("world"));
         helloPauseWorld.toStream().forEach(System.out::println);
     }

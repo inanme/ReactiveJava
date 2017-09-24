@@ -12,6 +12,11 @@ import java.util.concurrent.TimeUnit;
 
 class StockModule {
 
+    private StockModule() {
+        throw new UnsupportedOperationException("dont");
+    }
+
+
     static class Stock {
         final String symbol;
 
@@ -75,7 +80,7 @@ class StockModule {
 
         void log(Object log) {
             String now = LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_TIME);
-            System.err.format("%s %s: %s \n", now, Thread.currentThread().getName(), log);
+            System.err.format("%s %s: %s %n", now, Thread.currentThread().getName(), log);
         }
     }
 }
