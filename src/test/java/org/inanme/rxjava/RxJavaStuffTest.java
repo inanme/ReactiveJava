@@ -1,10 +1,14 @@
 package org.inanme.rxjava;
 
 import com.google.common.collect.Iterables;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import rx.Observable;
+import rx.Single;
 import rx.observables.ConnectableObservable;
 import rx.schedulers.Schedulers;
+import rx.subjects.AsyncSubject;
+import rx.subjects.BehaviorSubject;
+import rx.subjects.ReplaySubject;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -18,12 +22,13 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public class RxJavaStuffTest extends Infra {
+class RxJavaStuffTest extends Infra {
 
     @Test
-    public void zip() {
+    void zip() {
         Observable<Long> task1 = Observable.from(future(2));
         Observable<Long> task2 = Observable.from(future(3));
         Observable<Long> task3 = Observable.from(future(4));
@@ -32,7 +37,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void concat() {
+    void concat() {
         Observable<Long> task1 = Observable.from(future(2));
         Observable<Long> task2 = Observable.from(future(3));
         Observable<Long> task3 = Observable.from(future(4));
@@ -40,7 +45,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void merge() {
+    void merge() {
         Observable<Long> task1 = Observable.from(future(2));
         Observable<Long> task2 = Observable.from(future(3));
         Observable<Long> task3 = Observable.from(future(4));
@@ -48,9 +53,9 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void test0() {
-        Observable<Integer> observable = Observable.create(subscriber -> {
-            Iterator<Integer> iterator = Arrays.asList(1, 2, 3).iterator();
+    void test0() {
+        Observable<Integer> observable = Observable.unsafeCreate(subscriber -> {
+            Iterator<Integer> iterator = _123.iterator();
             log("subs");
             while (iterator.hasNext()) {
                 if (!subscriber.isUnsubscribed()) {
@@ -82,7 +87,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void test1() {
+    void test1() {
         Observable.OnSubscribe<String> subscribeFunction = (s) -> {
 
             List<Future<String>> futures = IntStream.range(1, 5)
@@ -90,7 +95,8 @@ public class RxJavaStuffTest extends Infra {
                         int sleepTime = random.nextInt(10);
                         TimeUnit.SECONDS.sleep(sleepTime);
                         return String.format("%d wait %d", i, sleepTime);
-                    }).map(ioPool::submit).collect(Collectors.toList());
+                    }).map(ioPool::submit)
+                    .collect(Collectors.toList());
 
             futures.forEach(f -> {
                 if (!s.isUnsubscribed()) {
@@ -106,14 +112,14 @@ public class RxJavaStuffTest extends Infra {
             }
         };
 
-        Observable.create(subscribeFunction)
+        Observable.unsafeCreate(subscribeFunction)
                 .subscribe((incomingValue) -> log("incomingValue " + incomingValue),
                         (error) -> log("Something went wrong" + error.getMessage()),
                         () -> log("This observable is finished"));
     }
 
     @Test
-    public void primitiveProcessing() {
+    void primitiveProcessing() {
         Observable<Integer> just = Observable.just(1, 2, 3);
 
         List<Integer> single10 = just.map(i -> i + 10).toList().toBlocking().single();
@@ -135,9 +141,9 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void synchronousObservableExample() {
-        Observable<Integer> observable = Observable.create(subscriber -> {
-            Iterator<Integer> iterator = Arrays.asList(0, 1, 2, 3).iterator();
+    void synchronousObservableExample() {
+        Observable<Integer> observable = Observable.unsafeCreate(subscriber -> {
+            Iterator<Integer> iterator = _123.iterator();
             while (iterator.hasNext()) {
                 if (!subscriber.isUnsubscribed()) {
                     subscriber.onNext(iterator.next());
@@ -153,10 +159,10 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void asynchronousObservableExample() throws InterruptedException {
-        Observable<Integer> observable = Observable.create(subscriber -> {
+    void asynchronousObservableExample() throws InterruptedException {
+        Observable<Integer> observable = Observable.unsafeCreate(subscriber -> {
             ioPool.submit(() -> {
-                Iterator<Integer> iterator = Arrays.asList(0, 1, 2, 3).iterator();
+                Iterator<Integer> iterator = _123.iterator();
                 while (iterator.hasNext()) {
                     if (!subscriber.isUnsubscribed()) {
                         subscriber.onNext(iterator.next());
@@ -174,7 +180,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void none() {
+    void none() {
 
         Observable.just(1, 2, 3)
                 //Asynchronously subscribes Observers to this Observable
@@ -195,7 +201,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void intervalCold() {
+    void intervalCold() {
         Observable<Long> interval = Observable.interval(1, TimeUnit.SECONDS, ioScheduler);
         sseconds(3l);
         interval.observeOn(ioScheduler).subscribe(this::log);
@@ -203,7 +209,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void backpressure() {
+    void backpressure() {
         Observable.interval(10, TimeUnit.MILLISECONDS, Schedulers.from(thread0))
                 .onBackpressureLatest()
                 //.onBackpressureBuffer()
@@ -216,8 +222,8 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void backpressure1() {
-        Observable.<Long>create(subscriber -> {
+    void backpressure1() {
+        Observable.<Long>unsafeCreate(subscriber -> {
             LongStream.range(1, 100).forEach(l -> {
                         subscriber.onNext(l);
                         smilis(4);
@@ -235,7 +241,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void intervalHot() {
+    void intervalHot() {
         ConnectableObservable<Long> publish =
                 Observable.interval(1, TimeUnit.SECONDS, ioScheduler).publish();
         sseconds(3l);
@@ -246,7 +252,7 @@ public class RxJavaStuffTest extends Infra {
     }
 
     @Test
-    public void mergeConcatZip() {
+    void mergeConcatZip() {
         List<Integer> list1 = Arrays.asList(1, 2, 3, 4);
         List<Integer> list2 = Arrays.asList(5, 6, 7, 8, 9);
         Observable.from(Iterables.concat(list1, list2));
@@ -254,6 +260,49 @@ public class RxJavaStuffTest extends Infra {
         Observable.zip(Observable.from(list1), Observable.from(list2), (x, y) -> x + y);
         Observable.from(list1).concatWith(Observable.from(list2));
         Observable.merge(Observable.from(list1), Observable.from(list2)).forEach(this::log);
+    }
+
+    @Test
+    void repeatWhen() {
+        Observable.from(_123).repeat(2).subscribe(this::log);
+    }
+
+    @Test
+    void asyncSubject() {
+        AsyncSubject<Integer> subject = AsyncSubject.create();
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    @Test
+    void behaviorSubject() {
+        BehaviorSubject<Integer> subject = BehaviorSubject.create(0);
+        _123.forEach(subject::onNext);
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    @Test
+    void replaySubject() {
+        ReplaySubject<Integer> subject = ReplaySubject.create();
+        subject.subscribe(this::log);
+        subject.subscribe(this::log);
+        _123.forEach(subject::onNext);
+        subject.onCompleted();
+    }
+
+    Single<Integer> fromCallbackApi(int i) {
+        return Single.fromEmitter(emitter -> {
+            callbackApi(i, (integer, throwable) -> {
+                if (throwable == null) {
+                    emitter.onSuccess(integer);
+                } else {
+                    emitter.onError(throwable);
+                }
+            });
+        });
     }
 
 }

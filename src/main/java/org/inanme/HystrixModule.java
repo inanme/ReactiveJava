@@ -7,6 +7,10 @@ import rx.Observable;
 
 class HystrixModule {
 
+    private HystrixModule() {
+        throw new UnsupportedOperationException("dont");
+    }
+
     static class Command1 extends HystrixCommand<String> {
 
         private final String name;

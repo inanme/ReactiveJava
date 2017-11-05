@@ -1,13 +1,21 @@
 package org.inanme;
 
 import com.google.common.base.MoreObjects;
-import rx.Observable;
 import rx.Scheduler;
+import rx.Single;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 class StockModule {
+
+    private StockModule() {
+        throw new UnsupportedOperationException("dont");
+    }
+
 
     static class Stock {
         final String symbol;
@@ -39,7 +47,7 @@ class StockModule {
     }
 
     interface StockServer {
-        Observable<StockOption> getFeed(Stock stock);
+        Single<StockOption> getFeed(Stock stock);
     }
 
     static class StockServerImpl implements StockServer {
@@ -53,18 +61,26 @@ class StockModule {
         }
 
         @Override
-        public Observable<StockOption> getFeed(Stock stock) {
-            return Observable.<StockOption>create(subscriber -> {
-                Integer random = rng.nextInt(4);
-                try {
-                    System.out.println("Will wait " + random);
-                    TimeUnit.SECONDS.sleep(random.longValue());
-                } catch (InterruptedException e) {
-                    subscriber.onError(e);
-                }
-                subscriber.onNext(new StockOption(stock, random.doubleValue()));
-                subscriber.onCompleted();
-            }).subscribeOn(scheduler);
+        public Single<StockOption> getFeed(Stock stock) {
+            return Single.fromCallable(() -> privGetFeed(stock)).subscribeOn(scheduler);
+            //return Single.just(privGetFeed(stock)).subscribeOn(scheduler);
+            //return Single.defer(() -> Single.just(privGetFeed(stock))).subscribeOn(scheduler);
+        }
+
+        private StockOption privGetFeed(Stock stock) {
+            Integer random = rng.nextInt(4);
+            try {
+                log("Will wait " + random);
+                TimeUnit.SECONDS.sleep(random.longValue());
+                return new StockOption(stock, random.doubleValue());
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        void log(Object log) {
+            String now = LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_TIME);
+            System.err.format("%s %s: %s %n", now, Thread.currentThread().getName(), log);
         }
     }
 }

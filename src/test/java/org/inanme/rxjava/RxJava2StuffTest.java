@@ -2,10 +2,10 @@ package org.inanme.rxjava;
 
 import com.google.common.collect.Iterables;
 import io.reactivex.*;
-import io.reactivex.subjects.Subject;
-import org.junit.Test;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.Subject;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -18,12 +18,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public class RxJava2StuffTest extends Infra {
+class RxJava2StuffTest extends Infra {
 
     @Test
-    public void zip() {
+    void zip() {
         Observable<Long> task1 = Observable.fromFuture(future(2));
         Observable<Long> task2 = Observable.fromFuture(future(3));
         Observable<Long> task3 = Observable.fromFuture(future(4));
@@ -32,7 +32,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void newStuff() {
+    void newStuff() {
         Observable.fromFuture(future(1)).toList().blockingGet();
         Single.fromFuture(future(1)).blockingGet();
         Maybe.fromFuture(future(1)).blockingGet();
@@ -42,7 +42,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void defer() {
+    void defer() {
         Observable.<Integer>defer(() -> observer -> {
             _123.forEach(observer::onNext);
             observer.onComplete();
@@ -50,7 +50,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void experiments() {
+    void experiments() {
         Observable.create(e -> {
             _123.forEach(l -> {
                 if (!e.isDisposed()) {
@@ -65,7 +65,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void test0() {
+    void test0() {
         Observable<Integer> observable = Observable.create(subscriber -> {
             PrimitiveIterator.OfInt iterator = IntStream.range(1, 3).iterator();
             log("subs");
@@ -95,11 +95,11 @@ public class RxJava2StuffTest extends Infra {
                     return x * 2;
                 }).subscribe(s -> log("observe " + s));
 
-        sseconds(3l);
+        sseconds(3L);
     }
 
     @Test
-    public void test1() {
+    void test1() {
         ObservableOnSubscribe<String> subscribeFunction = (s) -> {
 
             List<Future<String>> futures = IntStream.range(1, 5).mapToObj(i -> (Callable<String>) () -> {
@@ -129,7 +129,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void primitiveProcessing() {
+    void primitiveProcessing() {
         Observable<Integer> just = Observable.just(1, 2, 3);
 
         List<Integer> single10 = just.map(i -> i + 10).toList().blockingGet();
@@ -151,7 +151,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void synchronousObservableExample() {
+    void synchronousObservableExample() {
         Observable<Integer> observable = Observable.create(subscriber -> {
             PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
             if (!subscriber.isDisposed()) {
@@ -169,20 +169,18 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void asynchronousObservableExample() throws InterruptedException {
-        Observable<Integer> observable = Observable.create(subscriber -> {
-            ioPool.submit(() -> {
-                PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
-                if (!subscriber.isDisposed()) {
-                    while (iterator.hasNext()) {
-                        subscriber.onNext(iterator.next());
-                    }
+    void asynchronousObservableExample() throws InterruptedException {
+        Observable<Integer> observable = Observable.create(subscriber -> ioPool.submit(() -> {
+            PrimitiveIterator.OfInt iterator = IntStream.range(0, 3).iterator();
+            if (!subscriber.isDisposed()) {
+                while (iterator.hasNext()) {
+                    subscriber.onNext(iterator.next());
                 }
-                if (!subscriber.isDisposed()) {
-                    subscriber.onComplete();
-                }
-            });
-        });
+            }
+            if (!subscriber.isDisposed()) {
+                subscriber.onComplete();
+            }
+        }));
 
         observable.subscribe(s -> log("hello1-" + s));
         //observable.subscribe(s -> log("hello2-" + s));
@@ -190,7 +188,7 @@ public class RxJava2StuffTest extends Infra {
     }
 
     @Test
-    public void none() {
+    void none() {
 
         Observable.just(1, 2, 3)
                 //Asynchronously subscribes Observers to this Observable
@@ -206,31 +204,31 @@ public class RxJava2StuffTest extends Infra {
                 .doOnNext(x -> log(String.format("III:%s:%d", Thread.currentThread().getName(), x)))
                 .subscribe(x -> log(String.format("IV :%s:%d", Thread.currentThread().getName(), x)));
 
-        sseconds(3l);
+        sseconds(3L);
 
     }
 
     @Test
-    public void intervalCold() {
+    void intervalCold() {
         Observable<Long> interval = Observable.interval(1, TimeUnit.SECONDS, ioScheduler2);
-        sseconds(3l);
+        sseconds(3L);
         interval.observeOn(ioScheduler2).subscribe(this::log);
-        sseconds(3l);
+        sseconds(3L);
     }
 
     @Test
-    public void intervalHot() {
+    void intervalHot() {
         ConnectableObservable<Long> publish =
                 Observable.interval(1, TimeUnit.SECONDS, ioScheduler2).publish();
-        sseconds(2l);
+        sseconds(2L);
         publish.observeOn(ioScheduler2).subscribe(this::log);
         publish.observeOn(ioScheduler2).subscribe(this::log);
 
-        sseconds(3l);
+        sseconds(3L);
     }
 
     @Test
-    public void mergeConcatZip() {
+    void mergeConcatZip() {
         List<Integer> list1 = Arrays.asList(1, 2, 3, 4);
         List<Integer> list2 = Arrays.asList(5, 6, 7, 8, 9);
         Observable.fromIterable(Iterables.concat(list1, list2));
@@ -238,6 +236,25 @@ public class RxJava2StuffTest extends Infra {
         Observable.zip(Observable.fromIterable(list1), Observable.fromIterable(list2), (x, y) -> x + y);
         Observable.fromIterable(list1).concatWith(Observable.fromIterable(list2));
         Observable.merge(Observable.fromIterable(list1), Observable.fromIterable(list2)).forEach(System.out::println);
+    }
+
+
+    private Single<Integer> fromCallbackApi(int i) {
+        return Single.create(emitter -> callbackApi(i, (integer, throwable) -> {
+            if (throwable == null) {
+                emitter.onSuccess(integer);
+            } else {
+                emitter.onError(throwable);
+            }
+        }));
+    }
+
+    @Test
+    void callback2Rx() {
+        Single<Integer> single5 = fromCallbackApi(5);
+        Single<Integer> single6 = fromCallbackApi(6);
+        Single.zip(single5, single6, (x, y) -> x + y).subscribe(this::log);
+        sseconds(3L);
     }
 
 }
