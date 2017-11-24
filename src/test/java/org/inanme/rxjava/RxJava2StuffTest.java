@@ -13,10 +13,11 @@ import java.util.PrimitiveIterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -104,7 +105,7 @@ class RxJava2StuffTest extends Infra {
 
             List<Future<String>> futures = IntStream.range(1, 5).mapToObj(i -> (Callable<String>) () -> {
                 int sleepTime = random.nextInt(10);
-                TimeUnit.SECONDS.sleep(sleepTime);
+                SECONDS.sleep(sleepTime);
                 return String.format("%d wait %d", i, sleepTime);
             }).map(ioPool::submit).collect(Collectors.toList());
 
@@ -210,7 +211,7 @@ class RxJava2StuffTest extends Infra {
 
     @Test
     void intervalCold() {
-        Observable<Long> interval = Observable.interval(1, TimeUnit.SECONDS, ioScheduler2);
+        Observable<Long> interval = Observable.interval(1, SECONDS, ioScheduler2);
         sseconds(3L);
         interval.observeOn(ioScheduler2).subscribe(this::log);
         sseconds(3L);
@@ -219,7 +220,7 @@ class RxJava2StuffTest extends Infra {
     @Test
     void intervalHot() {
         ConnectableObservable<Long> publish =
-                Observable.interval(1, TimeUnit.SECONDS, ioScheduler2).publish();
+                Observable.interval(1, SECONDS, ioScheduler2).publish();
         sseconds(2L);
         publish.observeOn(ioScheduler2).subscribe(this::log);
         publish.observeOn(ioScheduler2).subscribe(this::log);
@@ -253,8 +254,8 @@ class RxJava2StuffTest extends Infra {
     void callback2Rx() {
         Single<Integer> single5 = fromCallbackApi(5);
         Single<Integer> single6 = fromCallbackApi(6);
-        Single.zip(single5, single6, (x, y) -> x + y).subscribe(this::log);
-        sseconds(3L);
+        Single<Integer> zip = Single.zip(single5, single6, (x, y) -> x + y);
+        await().atMost(1, SECONDS).until(zip::blockingGet, is(11));
     }
 
 }

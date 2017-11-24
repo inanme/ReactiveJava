@@ -1,6 +1,9 @@
-# User-specific stuff:
+# b1.User-specific stuff:
 .idea/
+.gradle/
 target/
 *.iml
 *.iws
 .idea_modules/
+out/
+build/
